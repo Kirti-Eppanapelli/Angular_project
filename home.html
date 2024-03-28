@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html ng-app="myApp">
+<head>
+    <link rel="stylesheet" href="styles.css">
+    <title>Student Registration</title>
+    <style>
+        .container {
+             background-color: rgba(0, 0, 0, 0.6);
+             padding: 20px;
+             color: white;
+             border-radius: 10px;
+             margin: 0 auto; /* This centers the container horizontally */
+             margin-top: 20px; /* Add a top margin for space */
+             width: 50%;
+}
+
+        .student-info {
+            background-color:rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            width: 40%;
+            margin: 0 auto; /* This centers the container horizontally */
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.9/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-route/1.7.9/angular-route.min.js"></script>
+</head>
+<body ng-controller="HomeController" style="background-color: #333; color: #ffffff;">
+
+    <div class="container">
+        <h1>Student Registration Form</h1>
+        
+        <div>
+            <h2></h2>
+            <form ng-submit="addStudent()">
+                Enter Your Name:<input type="text" ng-model="newStudent.name" placeholder="Name" required>
+                Enter Your Roll No:<input type="number" ng-model="newStudent.rollNo" placeholder="Roll Number" required>
+                Enter Your Department:<input type="text" ng-model="newStudent.department" placeholder="Department" required>
+                Enter your Email:<br><input type="email" ng-model="newStudent.email" placeholder="Email" required>
+                <br>Enter your Phone Number<br><input type="number" ng-model="newStudent.phone" placeholder="Number" required>
+                <button type="submit">Add</button>
+            </form>
+        </div>
+
+        <div ng-show="studentsLoaded">
+            <h2>Students Details</h2>
+            <div class="student-info" ng-repeat="student in students">
+                <div ng-if="!editingStudent || editingStudent._id !== student._id">
+                    <p><strong>Name:</strong> {{ student.name }}</p>
+                    <p><strong>Roll No:</strong> {{ student.rollNo }}</p>
+                    <p><strong>Department:</strong> {{ student.department }}</p>
+                    <p><strong>Email:</strong> {{ student.email }}</p>
+                    <p><strong>Phone:</strong> {{ student.phone }}</p>
+                    <button ng-click="deleteStudent(student._id)">Delete</button>
+                    <button ng-click="editStudent(student)">Edit</button>
+                </div>
+                <div ng-if="editingStudent && editingStudent._id === student._id">
+                    <form ng-submit="updateStudent()">
+                        <input type="text" ng-model="editingStudent.name" required>
+                        <input type="number" ng-model="editingStudent.rollNo" required>
+                        <input type="text" ng-model="editingStudent.department" required>
+                        <input type="email" ng-model="editingStudent.email" required>
+                        <input type="number" ng-model="editingStudent.phone" required>
+                        <button type="submit">Update</button>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        angular.module('myApp', [])
+            .controller('HomeController', function($scope, $http) {
+                $scope.newStudent = {};
+                $scope.editingStudent = null;
+                $scope.students = [];
+                $scope.studentsLoaded = false;
+
+                // Load students from the server
+                $http.get('http://localhost:3000/students')
+                    .then(function(response) {
+                        $scope.students = response.data;
+                        $scope.studentsLoaded = true;
+                    })
+                    .catch(function(error) {
+                        console.error('Error loading students:', error);
+                    });
+
+                $scope.addStudent = function() {
+                    $http.post('http://localhost:3000/students', $scope.newStudent)
+                        .then(function(response) {
+                            $scope.students.push(response.data);
+                            $scope.newStudent = {};
+                        });
+                };
+
+                $scope.deleteStudent = function(studentId) {
+                    $http.delete('http://localhost:3000/students/' + studentId)
+                        .then(function(response) {
+                            $scope.students = $scope.students.filter(function(student) {
+                                return student._id !== studentId;
+                            });
+                        });
+                };
+
+                $scope.editStudent = function(student) {
+                    $scope.editingStudent = angular.copy(student);
+                };
+
+                $scope.updateStudent = function() {
+                    $http.put('http://localhost:3000/students/' + $scope.editingStudent._id, $scope.editingStudent)
+                        .then(function(response) {
+                            var index = $scope.students.findIndex(function(student) {
+                                return student._id === $scope.editingStudent._id;
+                            });
+                            $scope.students[index] = response.data;
+                            $scope.editingStudent = null;
+
+                            // Reload the list of students
+                            $http.get('http://localhost:3000/students')
+                                .then(function(response) {
+                                    $scope.students = response.data;
+                                })
+                                .catch(function(error) {
+                                    console.error('Error reloading students:', error);
+                                });
+                        })
+                        .catch(function(error) {
+                            console.error('Error updating student:', error);
+                        });
+                };
+
+
+            });
+    </script>
+</body>
+</html>
